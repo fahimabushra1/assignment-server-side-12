@@ -97,6 +97,21 @@ async function run() {
         });
 
 
+        app.get('/myreview', verifyJWT, async (req, res) => {
+            const decodedEmail = req.decoded.email;
+            const email = req.query.email;
+            if (email === decodedEmail) {
+                const query = { email: email };
+                const cursor = reviewCollection.find(query);
+                const addedReviews = await cursor.toArray();
+                res.send(addedReviews);
+            }
+            else {
+                res.status(403).send({ message: 'forbidden access' })
+            }
+        })
+
+
 
         app.post('/myreview', async (req, res) => {
             const review = req.body;
