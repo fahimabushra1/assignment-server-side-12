@@ -37,6 +37,7 @@ async function run() {
         const productCollection = client.db('highWay').collection('product');
         const userCollection = client.db('highWay').collection('users');
         const orderCollection = client.db('highWay').collection('orders');
+        const reviewCollection = client.db('highWay').collection('myreview');
 
         app.get('/product', async (req, res) => {
             const query = {}
@@ -94,6 +95,14 @@ async function run() {
             const result = await orderCollection.insertOne(orders);
             res.send(result);
         });
+
+
+
+        app.post('/myreview', async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+        })
 
     }
 
