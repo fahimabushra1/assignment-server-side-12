@@ -25,6 +25,7 @@ function verifyJWT(req, res, next) {
         if (err) {
             return res.status(403).send({ message: 'Forbidden access' })
         }
+        console.log('decoded', decoded)
         req.decoded = decoded;
         next();
     });
@@ -39,6 +40,21 @@ async function run() {
         const orderCollection = client.db('highWay').collection('orders');
         const reviewCollection = client.db('highWay').collection('myreview');
 
+
+
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                next();
+            }
+            else {
+                res.status(403).send({ message: 'forbidden' });
+            }
+        }
+
+
+
         app.get('/product', async (req, res) => {
             const query = {}
             const cursor = productCollection.find(query)
@@ -46,25 +62,36 @@ async function run() {
             res.send(products)
         });
 
-        app.get('/user', verifyJWT, async (req, res) => {
-            const users = await userCollection.find().toArray();
-            res.send(users);
-        });
 
         app.get('/product/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
+            // console.log(id);
             const query = { _id: ObjectId(id) };
             console.log(query);
             const product = await productCollection.findOne(query)
             res.send(product);
         })
 
+
+        app.get('/user', async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
+
+
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin })
+        })
+
+
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
-            console.log(email)
+            // console.log(email)
             const user = req.body;
-            console.log(user)
+            // console.log(user)
             const filter = { email: email };
             const options = { upsert: true };
             const updateDoc = {
@@ -74,6 +101,19 @@ async function run() {
             const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' })
             res.send({ result, token });
         });
+
+
+
+        app.put('/user/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
+
 
 
         app.get('/order', verifyJWT, async (req, res) => {
@@ -100,6 +140,7 @@ async function run() {
         app.get('/myreview', verifyJWT, async (req, res) => {
             const decodedEmail = req.decoded.email;
             const email = req.query.email;
+            console.log(email)
             if (email === decodedEmail) {
                 const query = { email: email };
                 const cursor = reviewCollection.find(query);
