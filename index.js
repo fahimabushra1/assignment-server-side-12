@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 
@@ -39,6 +40,7 @@ async function run() {
         const userCollection = client.db('highWay').collection('users');
         const orderCollection = client.db('highWay').collection('orders');
         const reviewCollection = client.db('highWay').collection('myreview');
+        const paymentCollection = client.db('highWay').collection('payments');
 
 
 
@@ -52,6 +54,24 @@ async function run() {
                 res.status(403).send({ message: 'forbidden' });
             }
         }
+
+
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const product = req.body;
+            console.log(product)
+            const price = product.price;
+            console.log('price', price)
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({ clientSecret: paymentIntent.client_secret })
+        });
+
+
 
 
 
@@ -130,6 +150,16 @@ async function run() {
         });
 
 
+        app.get('/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const order = await orderCollection.findOne(query);
+            res.send(order);
+        })
+
+
+
+
         app.post('/order', async (req, res) => {
             const orders = req.body;
             const result = await orderCollection.insertOne(orders);
@@ -137,10 +167,29 @@ async function run() {
         });
 
 
+        app.patch('/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            console.log('id', id)
+            const payment = req.body;
+            console.log('payment', payment)
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+
+            const result = await paymentCollection.insertOne(payment);
+            const updatedOrder = await orderCollection.updateOne(filter, updatedDoc);
+            res.send(updatedOrder);
+        })
+
+
         app.get('/myreview', verifyJWT, async (req, res) => {
             const decodedEmail = req.decoded.email;
             const email = req.query.email;
-            console.log(email)
+            // console.log(email)
             if (email === decodedEmail) {
                 const query = { email: email };
                 const cursor = reviewCollection.find(query);
