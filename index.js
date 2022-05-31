@@ -87,10 +87,27 @@ async function run() {
             const id = req.params.id;
             // console.log(id);
             const query = { _id: ObjectId(id) };
-            console.log(query);
+            // console.log(query);
             const product = await productCollection.findOne(query)
             res.send(product);
         })
+
+
+        app.post('/product', async (req, res) => {
+            const newProduct = req.body;
+            console.log(newProduct)
+            const result = await productCollection.insertOne(newProduct);
+            res.send(result);
+        });
+
+
+        app.delete('/product/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await productCollection.deleteOne(query);
+            res.send(result);
+        });
+
 
 
         app.get('/user', async (req, res) => {
