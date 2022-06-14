@@ -26,7 +26,7 @@ function verifyJWT(req, res, next) {
         if (err) {
             return res.status(403).send({ message: 'Forbidden access' })
         }
-        console.log('decoded', decoded)
+        // console.log('decoded', decoded)
         req.decoded = decoded;
         next();
     });
@@ -41,6 +41,7 @@ async function run() {
         const orderCollection = client.db('highWay').collection('orders');
         const reviewCollection = client.db('highWay').collection('myreview');
         const paymentCollection = client.db('highWay').collection('payments');
+        const myProfileCollection = client.db('highWay').collection('myprofile');
 
 
 
@@ -95,7 +96,7 @@ async function run() {
 
         app.post('/product', async (req, res) => {
             const newProduct = req.body;
-            console.log(newProduct)
+            // console.log(newProduct)
             const result = await productCollection.insertOne(newProduct);
             res.send(result);
         });
@@ -103,7 +104,9 @@ async function run() {
 
         app.delete('/product/:id', async (req, res) => {
             const id = req.params.id;
+            console.log('id', id)
             const query = { _id: ObjectId(id) };
+            console.log(query)
             const result = await productCollection.deleteOne(query);
             res.send(result);
         });
@@ -225,6 +228,12 @@ async function run() {
             const result = await reviewCollection.insertOne(review);
             res.send(result);
         })
+
+        app.post('/myprofile', async (req, res) => {
+            const profiles = req.body;
+            const result = await myProfileCollection.insertOne(profiles);
+            res.send(result);
+        });
 
     }
 
